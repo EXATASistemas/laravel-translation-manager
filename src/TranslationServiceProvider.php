@@ -1,8 +1,12 @@
-<?php namespace Barryvdh\TranslationManager;
+<?php
+namespace Barryvdh\TranslationManager;
 
 use Illuminate\Translation\TranslationServiceProvider as BaseTranslationServiceProvider;
+use Barryvdh\TranslationManager\Exceptions\InvalidConfiguration;
+use Barryvdh\TranslationManager\Models\Translation;
 
-class TranslationServiceProvider extends BaseTranslationServiceProvider {
+class TranslationServiceProvider extends BaseTranslationServiceProvider
+{
 
 
     /**
@@ -15,8 +19,7 @@ class TranslationServiceProvider extends BaseTranslationServiceProvider {
 
         $this->registerLoader();
 
-        $this->app->singleton('translator', function($app)
-        {
+        $this->app->singleton('translator', function ($app) {
             $loader = $app['translation.loader'];
 
             // When registering the translator component, we'll need to set the default
@@ -28,14 +31,29 @@ class TranslationServiceProvider extends BaseTranslationServiceProvider {
 
             $trans->setFallback($app['config']['app.fallback_locale']);
 
-            if($app->bound('translation-manager')){
+            if ($app->bound('translation-manager')) {
                 $trans->setTranslationManager($app['translation-manager']);
             }
 
             return $trans;
         });
-
     }
 
+    public static function determineTranslationModel(): string
+    {
+        $translationModel = config('translation-manager.translation_model') ?? Translation::class;
 
+        if (! is_a($translationModel, Translation::class, true)) {
+            throw InvalidConfiguration::modelIsNotValid($translationModel);
+        }
+
+        return $translationModel;
+    }
+
+    public static function getTranslationModelInstance(): Translation
+    {
+        $translationModelClassName = self::determineTranslationModel();
+
+        return new $translationModelClassName();
+    }
 }

@@ -4,24 +4,25 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller as BaseController;
 use Barryvdh\TranslationManager\Models\Translation;
 use Illuminate\Support\Collection;
-use Tanmuhittin\LaravelGoogleTranslate\Commands\TranslateFilesCommand;
 
 class Controller extends BaseController
 {
     /** @var \Barryvdh\TranslationManager\Manager  */
     protected $manager;
+    protected $translationModel;
 
     public function __construct(Manager $manager)
     {
         $this->manager = $manager;
+        $this->translationModel = TranslationServiceProvider::getTranslationModelInstance();
     }
 
     public function getIndex($group = null)
     {
         $locales = $this->manager->getLocales();
-        $groups = Translation::groupBy('group');
+        $groups = $this->translationModel::groupBy('group');
         $excludedGroups = $this->manager->getConfig('exclude_groups');
-        if($excludedGroups){
+        if ($excludedGroups) {
             $groups->whereNotIn('group', $excludedGroups);
         }
 
@@ -30,13 +31,13 @@ class Controller extends BaseController
             $groups = $groups->all();
         }
         $groups = [''=>'Choose a group'] + $groups;
-        $numChanged = Translation::where('group', $group)->where('status', Translation::STATUS_CHANGED)->count();
+        $numChanged = $this->translationModel::where('group', $group)->where('status', $this->translationModel::STATUS_CHANGED)->count();
 
 
-        $allTranslations = Translation::where('group', $group)->orderBy('key', 'asc')->get();
+        $allTranslations = $this->translationModel::where('group', $group)->orderBy('key', 'asc')->get();
         $numTranslations = count($allTranslations);
         $translations = [];
-        foreach($allTranslations as $translation){
+        foreach ($allTranslations as $translation) {
             $translations[$translation->key][$translation->locale] = $translation;
         }
 
@@ -59,7 +60,7 @@ class Controller extends BaseController
     protected function loadLocales()
     {
         //Set the default locale as the first one.
-        $locales = Translation::groupBy('locale')
+        $locales = $this->translationModel::groupBy('locale')
             ->select('locale')
             ->get()
             ->pluck('locale');
@@ -75,9 +76,9 @@ class Controller extends BaseController
     {
         $keys = explode("\n", request()->get('keys'));
 
-        foreach($keys as $key){
+        foreach ($keys as $key) {
             $key = trim($key);
-            if($group && $key){
+            if ($group && $key) {
                 $this->manager->missingKey('*', $group, $key);
             }
         }
@@ -86,7 +87,7 @@ class Controller extends BaseController
 
     public function postEdit($group = null)
     {
-        if(!in_array($group, $this->manager->getConfig('exclude_groups'))) {
+        if (!in_array($group, $this->manager->getConfig('exclude_groups'))) {
             $name = request()->get('name');
             $value = request()->get('value');
 
@@ -97,7 +98,7 @@ class Controller extends BaseController
                 'key' => $key,
             ]);
             $translation->value = (string) $value ?: null;
-            $translation->status = Translation::STATUS_CHANGED;
+            $translation->status = $this->translationModel::STATUS_CHANGED;
             $translation->save();
             return array('status' => 'ok');
         }
@@ -105,8 +106,8 @@ class Controller extends BaseController
 
     public function postDelete($group = null, $key)
     {
-        if(!in_array($group, $this->manager->getConfig('exclude_groups')) && $this->manager->getConfig('delete_enabled')) {
-            Translation::where('group', $group)->where('key', $key)->delete();
+        if (!in_array($group, $this->manager->getConfig('exclude_groups')) && $this->manager->getConfig('delete_enabled')) {
+            $this->translationModel::where('group', $group)->where('key', $key)->delete();
             return ['status' => 'ok'];
         }
     }
@@ -130,7 +131,7 @@ class Controller extends BaseController
     {
          $json = false;
 
-        if($group === '_json'){
+        if ($group === '_json') {
             $json = true;
         }
 
@@ -142,12 +143,9 @@ class Controller extends BaseController
     public function postAddGroup(Request $request)
     {
         $group = str_replace(".", '', $request->input('new-group'));
-        if ($group)
-        {
-            return redirect()->action('\Barryvdh\TranslationManager\Controller@getView',$group);
-        }
-        else
-        {
+        if ($group) {
+            return redirect()->action('\Barryvdh\TranslationManager\Controller@getView', $group);
+        } else {
             return redirect()->back();
         }
     }
