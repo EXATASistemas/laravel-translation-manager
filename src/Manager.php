@@ -3,7 +3,6 @@
 namespace Barryvdh\TranslationManager;
 
 use Barryvdh\TranslationManager\Events\TranslationsExportedEvent;
-use Barryvdh\TranslationManager\Models\Translation;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Filesystem\Filesystem;
