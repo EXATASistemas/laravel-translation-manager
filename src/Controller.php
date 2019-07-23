@@ -2,8 +2,8 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller as BaseController;
-use Barryvdh\TranslationManager\Models\Translation;
 use Illuminate\Support\Collection;
+use Tanmuhittin\LaravelGoogleTranslate\Commands\TranslateFilesCommand;
 
 class Controller extends BaseController
 {
@@ -92,7 +92,7 @@ class Controller extends BaseController
             $value = request()->get('value');
 
             list($locale, $key) = explode('|', $name, 2);
-            $translation = Translation::firstOrNew([
+            $translation = $this->translationModel::firstOrNew([
                 'locale' => $locale,
                 'group' => $group,
                 'key' => $key,
@@ -169,15 +169,16 @@ class Controller extends BaseController
         return redirect()->back();
     }
 
-    public function postTranslateMissing(Request $request){
+    public function postTranslateMissing(Request $request)
+    {
         $locales = $this->manager->getLocales();
         $newLocale = str_replace([], '-', trim($request->input('new-locale')));
-        if($request->has('with-translations') && $request->has('base-locale') && in_array($request->input('base-locale'),$locales) && $request->has('file') && in_array($newLocale, $locales)){
+        if ($request->has('with-translations') && $request->has('base-locale') && in_array($request->input('base-locale'), $locales) && $request->has('file') && in_array($newLocale, $locales)) {
             $base_locale = $request->get('base-locale');
             $group = $request->get('file');
-            $base_strings = Translation::where('group', $group)->where('locale', $base_locale)->get();
+            $base_strings = $this->translationModel::where('group', $group)->where('locale', $base_locale)->get();
             foreach ($base_strings as $base_string) {
-                $base_query = Translation::where('group', $group)->where('locale', $newLocale)->where('key', $base_string->key);
+                $base_query = $this->translationModel::where('group', $group)->where('locale', $newLocale)->where('key', $base_string->key);
                 if ($base_query->exists() && $base_query->whereNotNull('value')->exists()) {
                     // Translation already exists. Skip
                     continue;
