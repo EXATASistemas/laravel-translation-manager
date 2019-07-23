@@ -294,7 +294,13 @@ class Manager
 
                         $path = $path . DIRECTORY_SEPARATOR . $locale . DIRECTORY_SEPARATOR . $group . '.php';
 
-                        $output = "<?php\n\nreturn " . var_export($translations, true) . ";" . \PHP_EOL;
+                        $export = var_export($translations, true);
+                        $export = preg_replace("/^([ ]*)(.*)/m", '$1$1$2', $export);
+                        $array = preg_split("/\r\n|\n|\r/", $export);
+                        $array = preg_replace(["/\s*array\s\($/", "/\)(,)?$/", "/\s=>\s$/"], [null, ']$1', ' => ['], $array);
+                        $export = join(PHP_EOL, array_filter(["["] + $array));
+
+                        $output = "<?php\n\nreturn " . $export . ";" . \PHP_EOL;
                         $this->files->put($path, $output);
                     }
                 }
