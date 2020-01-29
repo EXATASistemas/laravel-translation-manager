@@ -2,23 +2,29 @@
 
 namespace Barryvdh\TranslationManager;
 
+use Barryvdh\TranslationManager\Events\TranslationsExportedEvent;
+use Illuminate\Contracts\Events\Dispatcher;
+use Illuminate\Contracts\Foundation\Application;
+use Illuminate\Filesystem\Filesystem;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 use Symfony\Component\Finder\Finder;
-use Illuminate\Filesystem\Filesystem;
-use Illuminate\Contracts\Events\Dispatcher;
-use Illuminate\Contracts\Foundation\Application;
-use Barryvdh\TranslationManager\Events\TranslationsExportedEvent;
 
 class Manager
 {
     const JSON_GROUP = '_json';
 
-    /** @var \Illuminate\Contracts\Foundation\Application */
+    /**
+     * @var \Illuminate\Contracts\Foundation\Application
+     */
     protected $app;
-    /** @var \Illuminate\Filesystem\Filesystem */
+    /**
+     * @var \Illuminate\Filesystem\Filesystem
+     */
     protected $files;
-    /** @var \Illuminate\Contracts\Events\Dispatcher */
+    /**
+     * @var \Illuminate\Contracts\Events\Dispatcher
+     */
     protected $events;
 
     protected $config;
@@ -33,14 +39,14 @@ class Manager
 
     public function __construct(Application $app, Filesystem $files, Dispatcher $events)
     {
-        $this->app              = $app;
+        $this->app = $app;
         $this->translationModel = TranslationServiceProvider::getTranslationModelInstance();
-        $this->files            = $files;
-        $this->events           = $events;
-        $this->config           = $app[ 'config' ][ 'translation-manager' ];
-        $this->ignoreFilePath   = storage_path('.ignore_locales');
-        $this->locales          = [];
-        $this->ignoreLocales    = $this->getIgnoredLocales();
+        $this->files = $files;
+        $this->events = $events;
+        $this->config = $app['config']['translation-manager'];
+        $this->ignoreFilePath = storage_path('.ignore_locales');
+        $this->locales = [];
+        $this->ignoreLocales = $this->getIgnoredLocales();
     }
 
     protected function getIgnoredLocales()
@@ -92,7 +98,7 @@ class Manager
                 $langPath = str_replace(DIRECTORY_SEPARATOR, '/', $langPath);
 
                 if ($subLangPath != $langPath) {
-                    $group = $subLangPath.'/'.$group;
+                    $group = $subLangPath . '/' . $group;
                 }
 
                 if (! $vendor) {
@@ -167,32 +173,34 @@ class Manager
         $stringKeys = [];
         $functions = $this->config['trans_functions'];
 
-        $groupPattern =                         // See https://regex101.com/r/WEJqdL/6
-            "[^\w|>]".                          // Must not have an alphanum or _ or > before real method
-            '('.implode('|', $functions).')'.   // Must start with one of the functions
-            "\(".                               // Match opening parenthesis
-            "[\'\"]".                           // Match " or '
-            '('.                                // Start a new group to match:
-            '[a-zA-Z0-9_-]+'.                   // Must start with group
-            "([.](?! )[^\1)]+)+".               // Be followed by one or more items/keys
-            ')'.                                // Close group
-            "[\'\"]".                           // Closing quote
+        $groupPattern =                          // See https://regex101.com/r/WEJqdL/6
+            "[^\w|>]" .                          // Must not have an alphanum or _ or > before real method
+            '(' . implode('|', $functions) . ')' .  // Must start with one of the functions
+            "\(" .                               // Match opening parenthesis
+            "[\'\"]" .                           // Match " or '
+            '(' .                                // Start a new group to match:
+            '[a-zA-Z0-9_-]+' .               // Must start with group
+            "([.](?! )[^\1)]+)+" .             // Be followed by one or more items/keys
+            ')' .                                // Close group
+            "[\'\"]" .                           // Closing quote
             "[\),]";                            // Close parentheses or new parameter
 
         $stringPattern =
-            "[^\w]".                                       // Must not have an alphanum before real method
-            '('.implode('|', $functions).')'.              // Must start with one of the functions
-            "\(".                                          // Match opening parenthesis
-            "(?P<quote>['\"])".                            // Match " or ' and store in {quote}
-            "(?P<string>(?:\\\k{quote}|(?!\k{quote}).)*)". // Match any string that can be {quote} escaped
-            "\k{quote}".                                   // Match " or ' previously matched
-            "[\),]";                                       // Close parentheses or new parameter
+            "[^\w]" .                                     // Must not have an alphanum before real method
+            '(' . implode('|', $functions) . ')' .             // Must start with one of the functions
+            "\(\s*" .                                       // Match opening parenthesis
+            "(?P<quote>['\"])" .                            // Match " or ' and store in {quote}
+            "(?P<string>(?:\\\k{quote}|(?!\k{quote}).)*)" . // Match any string that can be {quote} escaped
+            "\k{quote}" .                                   // Match " or ' previously matched
+            "\s*[\),]";                                    // Close parentheses or new parameter
 
         // Find all PHP + Twig files in the app folder, except for storage
         $finder = new Finder();
         $finder->in($path)->exclude('storage')->exclude('vendor')->name('*.php')->name('*.twig')->name('*.vue')->files();
 
-        /** @var \Symfony\Component\Finder\SplFileInfo $file */
+        /**
+         * @var \Symfony\Component\Finder\SplFileInfo
+         */
         foreach ($finder as $file) {
             // Search the current file for the pattern
             if (preg_match_all("/$groupPattern/siU", $file->getContents(), $matches)) {
@@ -214,7 +222,7 @@ class Manager
                     //skip keys which contain namespacing characters, unless they also contain a
                     //space, which makes it JSON.
                     if (! (Str::contains($key, '::') && Str::contains($key, '.'))
-                         || Str::contains($key, ' ')) {
+                        || Str::contains($key, ' ')) {
                         $stringKeys[] = $key;
                     }
                 }
@@ -245,7 +253,7 @@ class Manager
     {
         if (! in_array($group, $this->config['exclude_groups'])) {
             $this->translationModel::firstOrCreate([
-                'locale' => $this->app[ 'config' ][ 'app.locale' ],
+                'locale' => $this->app['config']['app.locale'],
                 'group'  => $group,
                 'key'    => $key,
             ]);
@@ -297,16 +305,16 @@ class Manager
                         $path = $path . DIRECTORY_SEPARATOR . $locale . DIRECTORY_SEPARATOR . $group . '.php';
 
                         $export = var_export($translations, true);
-                        $export = preg_replace("/^([ ]*)(.*)/m", '$1$1$2', $export);
+                        $export = preg_replace('/^([ ]*)(.*)/m', '$1$1$2', $export);
                         $array = preg_split("/\r\n|\n|\r/", $export);
                         $array = preg_replace(["/\s*array\s\($/", "/\)(,)?$/", "/\s=>\s$/"], [null, ']$1', ' => ['], $array);
-                        $export = join(PHP_EOL, array_filter(["["] + $array));
+                        $export = join(PHP_EOL, array_filter(['['] + $array));
 
-                        $output = "<?php\n\nreturn " . $export . ";" . \PHP_EOL;
+                        $output = "<?php\n\nreturn " . $export . ';' . \PHP_EOL;
                         $this->files->put($path, $output);
                     }
                 }
-                $this->translationModel::ofTranslatedGroup($group)->update([ 'status' => $this->translationModel::STATUS_SAVED ]);
+                $this->translationModel::ofTranslatedGroup($group)->update(['status' => $this->translationModel::STATUS_SAVED]);
             }
         }
 
@@ -318,13 +326,13 @@ class Manager
             foreach ($tree as $locale => $groups) {
                 if (isset($groups[self::JSON_GROUP])) {
                     $translations = $groups[self::JSON_GROUP];
-                    $path = $this->app['path.lang'].'/'.$locale.'.json';
+                    $path = $this->app['path.lang'] . '/' . $locale . '.json';
                     $output = json_encode($translations, \JSON_PRETTY_PRINT | \JSON_UNESCAPED_UNICODE);
                     $this->files->put($path, $output);
                 }
             }
 
-            $this->translationModel::ofTranslatedGroup(self::JSON_GROUP)->update([ 'status' => $this->translationModel::STATUS_SAVED ]);
+            $this->translationModel::ofTranslatedGroup(self::JSON_GROUP)->update(['status' => $this->translationModel::STATUS_SAVED]);
         }
 
         $this->events->dispatch(new TranslationsExportedEvent());
