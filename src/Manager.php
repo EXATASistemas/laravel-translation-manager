@@ -179,11 +179,11 @@ class Manager
             "\(" .                               // Match opening parenthesis
             "[\'\"]" .                           // Match " or '
             '(' .                                // Start a new group to match:
-            '[a-zA-Z0-9_-]+' .               // Must start with group
-            "([.](?! )[^\1)]+)+" .             // Be followed by one or more items/keys
+            '[\/a-zA-Z0-9_-]+' .                 // Must start with group
+            "([.](?! )[^\1)]+)+" .               // Be followed by one or more items/keys
             ')' .                                // Close group
             "[\'\"]" .                           // Closing quote
-            "[\),]";                            // Close parentheses or new parameter
+            "[\),]";                             // Close parentheses or new parameter
 
         $stringPattern =
             "[^\w]" .                                     // Must not have an alphanum before real method
@@ -212,7 +212,7 @@ class Manager
 
             if (preg_match_all("/$stringPattern/siU", $file->getContents(), $matches)) {
                 foreach ($matches['string'] as $key) {
-                    if (preg_match("/(^[a-zA-Z0-9_-]+([.][^\1)\ ]+)+$)/siU", $key, $groupMatches)) {
+                    if (preg_match("/(^[\/a-zA-Z0-9_-]+([.][^\1)\ ]+)+$)/siU", $key, $groupMatches)) {
                         // group{.group}.key format, already in $groupKeys but also matched here
                         // do nothing, it has to be treated as a group
                         continue;
@@ -262,6 +262,7 @@ class Manager
 
     public function exportTranslations($group = null, $json = false)
     {
+        $group = basename($group);
         $basePath = $this->app['path.lang'];
 
         if (! is_null($group) && ! $json) {
@@ -280,6 +281,7 @@ class Manager
                     ->get());
 
                 foreach ($tree as $locale => $groups) {
+                    $locale = basename($locale);
                     if (isset($groups[$group])) {
                         $translations = $groups[$group];
                         $path = $this->app['path.lang'];
@@ -302,7 +304,15 @@ class Manager
                             }
                         }
 
+<<<<<<< HEAD
                         $path = $path . DIRECTORY_SEPARATOR . $locale . DIRECTORY_SEPARATOR . $group . '.php';
+=======
+                        if ($vendor) {
+                            $path = $path.DIRECTORY_SEPARATOR.'messages.php';
+                        } else {
+                            $path = $path.DIRECTORY_SEPARATOR.$locale.DIRECTORY_SEPARATOR.$group.'.php';
+                        }
+>>>>>>> cfa0484084b5372f52d208bfa6f13aaaa11afaa5
 
                         $export = var_export($translations, true);
                         $export = preg_replace('/^([ ]*)(.*)/m', '$1$1$2', $export);
@@ -357,12 +367,19 @@ class Manager
     {
         $array = [];
         foreach ($translations as $translation) {
+<<<<<<< HEAD
             if ($json) {
                 $this->jsonSet(
                     $array[$translation->locale][$translation->group],
                     $translation->key,
                     $translation->value
                 );
+=======
+            // For JSON and sentences, do not use dotted notation
+            if ($json || Str::contains($translation->key, [' ']) || Str::endsWith($translation->key, ['.'])) {
+                $this->jsonSet($array[$translation->locale][$translation->group], $translation->key,
+                    $translation->value);
+>>>>>>> cfa0484084b5372f52d208bfa6f13aaaa11afaa5
             } else {
                 Arr::set(
                     $array[$translation->locale][$translation->group],
@@ -417,7 +434,11 @@ class Manager
 
     public function addLocale($locale)
     {
+<<<<<<< HEAD
         $localeDir = $this->app->langPath() . '/' . $locale;
+=======
+        $localeDir = $this->app->langPath().'/'.basename($locale);
+>>>>>>> cfa0484084b5372f52d208bfa6f13aaaa11afaa5
 
         $this->ignoreLocales = array_diff($this->ignoreLocales, [$locale]);
         $this->saveIgnoredLocales();
