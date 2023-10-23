@@ -304,15 +304,11 @@ class Manager
                             }
                         }
 
-<<<<<<< HEAD
-                        $path = $path . DIRECTORY_SEPARATOR . $locale . DIRECTORY_SEPARATOR . $group . '.php';
-=======
                         if ($vendor) {
                             $path = $path.DIRECTORY_SEPARATOR.'messages.php';
                         } else {
                             $path = $path.DIRECTORY_SEPARATOR.$locale.DIRECTORY_SEPARATOR.$group.'.php';
                         }
->>>>>>> cfa0484084b5372f52d208bfa6f13aaaa11afaa5
 
                         $export = var_export($translations, true);
                         $export = preg_replace('/^([ ]*)(.*)/m', '$1$1$2', $export);
@@ -367,19 +363,10 @@ class Manager
     {
         $array = [];
         foreach ($translations as $translation) {
-<<<<<<< HEAD
-            if ($json) {
-                $this->jsonSet(
-                    $array[$translation->locale][$translation->group],
-                    $translation->key,
-                    $translation->value
-                );
-=======
             // For JSON and sentences, do not use dotted notation
             if ($json || Str::contains($translation->key, [' ']) || Str::endsWith($translation->key, ['.'])) {
                 $this->jsonSet($array[$translation->locale][$translation->group], $translation->key,
                     $translation->value);
->>>>>>> cfa0484084b5372f52d208bfa6f13aaaa11afaa5
             } else {
                 Arr::set(
                     $array[$translation->locale][$translation->group],
@@ -434,11 +421,7 @@ class Manager
 
     public function addLocale($locale)
     {
-<<<<<<< HEAD
-        $localeDir = $this->app->langPath() . '/' . $locale;
-=======
         $localeDir = $this->app->langPath().'/'.basename($locale);
->>>>>>> cfa0484084b5372f52d208bfa6f13aaaa11afaa5
 
         $this->ignoreLocales = array_diff($this->ignoreLocales, [$locale]);
         $this->saveIgnoredLocales();
